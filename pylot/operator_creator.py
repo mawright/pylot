@@ -7,6 +7,7 @@ import pylot.utils
 # Control operators.
 from pylot.control.mpc.mpc_agent_operator import MPCAgentOperator
 from pylot.control.pid_agent_operator import PIDAgentOperator
+from pylot.control.time_to_decision_operator import TimeToDecisionOperator
 # Visualizing operators.
 from pylot.debug.camera_visualizer_operator import CameraVisualizerOperator
 from pylot.debug.can_bus_visualizer_operator import CanBusVisualizerOperator
@@ -69,7 +70,9 @@ def add_carla_bridge(control_stream):
     return erdos.connect(CarlaOperator, op_config, [control_stream], FLAGS)
 
 
-def add_obstacle_detection(camera_stream, csv_file_name=None):
+def add_obstacle_detection(camera_stream,
+                           time_to_decision_stream,
+                           csv_file_name=None):
     obstacles_streams = []
     if csv_file_name is None:
         csv_file_name = FLAGS.csv_log_file_name
@@ -80,7 +83,8 @@ def add_obstacle_detection(camera_stream, csv_file_name=None):
             csv_log_file_name=csv_file_name,
             profile_file_name=FLAGS.profile_file_name)
         obstacles_streams += erdos.connect(
-            DetectionOperator, op_config, [camera_stream],
+            DetectionOperator, op_config,
+            [camera_stream, time_to_decision_stream],
             FLAGS.obstacle_detection_model_paths[i], FLAGS)
     return obstacles_streams
 
@@ -686,3 +690,15 @@ def add_perfect_tracking(ground_obstacles_stream, can_bus_stream):
      ] = erdos.connect(PerfectTrackerOperator, op_config,
                        [ground_obstacles_stream, can_bus_stream], FLAGS)
     return ground_tracking_stream
+
+
+def add_time_to_decision(can_bus_stream, obstacles_stream):
+    op_config = erdos.OperatorConfig(name='time_to_decision_operator',
+                                     flow_watermarks=False,
+                                     log_file_name=FLAGS.log_file_name,
+                                     csv_log_file_name=FLAGS.csv_log_file_name,
+                                     profile_file_name=FLAGS.profile_file_name)
+    [time_to_decision] = erdos.connect(TimeToDecisionOperator, op_config,
+                                       [can_bus_stream, obstacles_stream],
+                                       FLAGS)
+    return time_to_decision

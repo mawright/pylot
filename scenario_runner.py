@@ -40,6 +40,7 @@ def driver():
     transform = pylot.utils.Transform(CENTER_CAMERA_LOCATION,
                                       pylot.utils.Rotation())
     control_loop_stream = erdos.LoopStream()
+    time_to_decision_loop_stream = erdos.LoopStream()
     # Create carla operator.
     (can_bus_stream, ground_traffic_lights_stream, ground_obstacles_stream,
      ground_speed_limit_signs_stream, ground_stop_signs_stream,
@@ -72,7 +73,7 @@ def driver():
         center_camera_stream, center_camera_setup, can_bus_stream,
         point_cloud_stream, depth_camera_stream, ground_segmented_stream,
         ground_obstacles_stream, ground_speed_limit_signs_stream,
-        ground_stop_signs_stream)
+        ground_stop_signs_stream, time_to_decision_loop_stream)
 
     traffic_lights_stream = \
         pylot.component_creator.add_traffic_light_detection(
@@ -107,6 +108,10 @@ def driver():
             can_bus_stream, waypoints_stream)
 
     control_loop_stream.set(control_stream)
+
+    time_to_decision_stream = pylot.operator_creator.add_time_to_decision(
+        can_bus_stream, obstacles_stream)
+    time_to_decision_loop_stream.set(time_to_decision_stream)
 
     pylot.operator_creator.add_sensor_visualizers(center_camera_stream,
                                                   depth_camera_stream,

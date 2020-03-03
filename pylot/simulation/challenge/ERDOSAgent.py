@@ -242,6 +242,7 @@ def get_track():
 def create_data_flow():
     """ Create the challenge data-flow graph."""
     track = get_track()
+    time_to_decision_loop_stream = erdos.LoopStream()
     camera_setups = create_camera_setups(track)
     camera_streams = {}
     for name in camera_setups:
@@ -264,7 +265,7 @@ def create_data_flow():
             camera_setups[CENTER_CAMERA_NAME])
 
     obstacles_stream = pylot.operator_creator.add_obstacle_detection(
-        camera_streams[CENTER_CAMERA_NAME])[0]
+        camera_streams[CENTER_CAMERA_NAME], time_to_decision_loop_stream)[0]
     # Adds an operator that finds the world locations of the obstacles.
     obstacles_stream = pylot.operator_creator.add_obstacle_location_finder(
         obstacles_stream, point_cloud_stream, can_bus_stream,
@@ -289,6 +290,11 @@ def create_data_flow():
     control_stream = pylot.operator_creator.add_pid_agent(
         can_bus_stream, waypoints_stream)
     extract_control_stream = erdos.ExtractStream(control_stream)
+
+    time_to_decision_stream = pylot.operator_creator.add_time_to_decision(
+        can_bus_stream, obstacles_stream)
+    time_to_decision_loop_stream.set(time_to_decision_stream)
+
     return (camera_streams, can_bus_stream, global_trajectory_stream,
             open_drive_stream, point_cloud_stream, extract_control_stream)
 
